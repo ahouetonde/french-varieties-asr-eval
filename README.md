@@ -116,6 +116,6 @@ distinguishable.
 
 Code under MIT. The two pilot corpora are CC-BY-4.0. FLEURS belongs to its authors.
 
-Built by [Labari Voice](https://huggingface.co/labari-voice), which records speech corpora in
-African francophone countries. If you measure your own model with this and get a result worth
+Built by [Labari Voice](https://huggingface.co/labari-voice), which produces speech data for
+low-resource languages and for the regional varieties of French. If you measure your own model with this and get a result worth
 discussing, we are interested either way.
