@@ -1,0 +1,4 @@
+requests
+jiwer
+huggingface_hub
+num2words
