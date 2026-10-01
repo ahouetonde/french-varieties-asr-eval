@@ -62,6 +62,14 @@ from the three FLEURS `fr_fr` splits. Inflected forms of known words are exclude
 rule, and a short manual exclusion list in `bench/entities.py` catches the residue. The lexicon
 holds 340 occurrences in Benin and 361 in Senegal.
 
+**Local name error rate (LNER)**, the sharpest of the three. It is the share of proper nouns in
+the references that the transcript gets wrong: towns, districts, utilities, people. A model can
+score a single-digit word error rate and still miss most of them, because they are a small
+fraction of the words and the fraction that carries the meaning. LNER is reported strict and
+accent-insensitive; the two are usually within a point, so a dropped accent never explains the
+figure. Foreign names that happen to appear in a reference count too, which makes the rate
+conservative.
+
 ## Running it
 
 ```bash

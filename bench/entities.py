@@ -1,4 +1,10 @@
-"""Local-term recall: for every local term in a reference, is it in the transcript?
+"""Local-term recall and local name error rate.
+
+Local-term recall: for every local term in a reference, is it in the transcript?
+
+Local name error rate (LNER): the share of proper nouns in the references that the transcript
+gets wrong. It is reported twice, strict and accent-insensitive, so that a near miss such as an
+accent dropped on a name cannot be blamed for the figure.
 
 An aggregate error rate compares corpora whose content differs: our sentences are about
 everyday life, FLEURS sentences come from encyclopedic articles. This metric avoids that bias,
@@ -18,6 +24,7 @@ import collections
 import json
 import pathlib
 import sys
+import unicodedata
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from score import DATA, RESULTS, load_refs, normalise  # noqa: E402
@@ -82,6 +89,12 @@ def local_lexicon(corpus: str) -> collections.Counter:
     return counts
 
 
+def fold(word: str) -> str:
+    """Remove accents, for the accent-insensitive variant of the name error rate."""
+    return "".join(c for c in unicodedata.normalize("NFD", word)
+                   if unicodedata.category(c) != "Mn")
+
+
 def main(only: str | None):
     rows, missed_by = [], {}
     for f in sorted(RESULTS.glob("*.jsonl")):
@@ -89,14 +102,20 @@ def main(only: str | None):
         if (only and vendor != only) or "control" in corpus:
             continue
         refs, lex = load_refs(corpus), local_lexicon(corpus)
-        total = hits = 0
+        nouns = proper_nouns(corpus.replace("_tel8k", ""))
+        total = hits = names = name_miss = name_miss_folded = 0
         missed = collections.Counter()
         for line in f.read_text(encoding="utf-8").splitlines():
             rec = json.loads(line)
             if "error" in rec or rec["id"] not in refs:
                 continue
             hyp = set(normalise(rec["text"]).split())
+            hyp_folded = {fold(w) for w in hyp}
             for w in normalise(refs[rec["id"]]).split():
+                if w in nouns:
+                    names += 1
+                    name_miss += w not in hyp
+                    name_miss_folded += fold(w) not in hyp_folded
                 if w in lex:
                     total += 1
                     if w in hyp:
@@ -104,15 +123,19 @@ def main(only: str | None):
                     else:
                         missed[w] += 1
         if total:
-            rows.append((vendor, corpus, total, hits, 100 * hits / total))
+            lner = 100 * name_miss / names if names else float("nan")
+            lner_f = 100 * name_miss_folded / names if names else float("nan")
+            rows.append((vendor, corpus, total, hits, 100 * hits / total, names, lner, lner_f))
             missed_by[(vendor, corpus)] = missed
 
     if not rows:
         sys.exit("nothing to measure: run bench/run.py first")
 
-    print(f"\n{'vendor':<22}{'corpus':<18}{'local terms':>12}{'recovered':>11}{'recall':>9}")
-    for vendor, corpus, total, hits, pct in sorted(rows):
-        print(f"{vendor:<22}{corpus:<18}{total:>12}{hits:>11}{pct:>8.1f}%")
+    print(f"\n{'adapter':<22}{'corpus':<18}{'local terms':>12}{'recall':>9}"
+          f"{'names':>8}{'LNER':>8}{'LNER, no accents':>18}")
+    for vendor, corpus, total, hits, pct, names, lner, lner_f in sorted(rows):
+        print(f"{vendor:<22}{corpus:<18}{total:>12}{pct:>8.1f}%"
+              f"{names:>8}{lner:>7.1f}%{lner_f:>17.1f}%")
 
     print("\nmost frequently lost terms")
     for key in sorted(missed_by):
