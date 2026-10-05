@@ -15,6 +15,8 @@ A local term is a word of at least four characters that is either capitalised mi
 the raw reference, so a proper noun, or absent from the French vocabulary built by fetch.py
 from the three FLEURS fr_fr splits.
 
+Both pilots are also measured together (fr_bj+fr_sn), which is the headline figure.
+
 Usage:
     python bench/entities.py           every vendor
     python bench/entities.py my_vendor one adapter
@@ -27,7 +29,7 @@ import sys
 import unicodedata
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from score import DATA, RESULTS, load_refs, normalise  # noqa: E402
+from score import COMBINED, DATA, RESULTS, load_refs, normalise  # noqa: E402
 
 MIN_LEN = 4
 VOCAB_FILE = DATA / "vocab_fr_fleurs.txt"
@@ -96,7 +98,7 @@ def fold(word: str) -> str:
 
 
 def main(only: str | None):
-    rows, missed_by = [], {}
+    rows, missed_by, counts = [], {}, {}
     for f in sorted(RESULTS.glob("*.jsonl")):
         vendor, corpus = f.stem.split("__", 1)
         if (only and vendor != only) or "control" in corpus:
@@ -127,6 +129,14 @@ def main(only: str | None):
             lner_f = 100 * name_miss_folded / names if names else float("nan")
             rows.append((vendor, corpus, total, hits, 100 * hits / total, names, lner, lner_f))
             missed_by[(vendor, corpus)] = missed
+            counts[(vendor, corpus)] = (total, hits, names, name_miss, name_miss_folded)
+
+    for vendor in sorted({v for v, _ in counts}):
+        for name, parts in COMBINED.items():
+            if all((vendor, c) in counts for c in parts):
+                total, hits, names, miss, miss_f = (sum(x) for x in zip(*(counts[(vendor, c)] for c in parts)))
+                rows.append((vendor, name, total, hits, 100 * hits / total, names,
+                             100 * miss / names, 100 * miss_f / names))
 
     if not rows:
         sys.exit("nothing to measure: run bench/run.py first")

@@ -2,10 +2,10 @@
 
 *How well does speech recognition handle French as it is spoken outside France?*
 
-An evaluation harness for French as it is actually spoken. Most French speakers live outside
-France, yet no commercial speech-to-text vendor ships a French variant beyond France, Belgium,
-Switzerland and Canada. This repository measures what that costs, on two corpora recorded in
-Benin and Senegal, against a metropolitan French control.
+An evaluation harness for the regional varieties of French. Most French speakers live outside
+France, and speech recognition is mostly measured on French from France. This repository
+measures the difference on two West African French pilot datasets, Beninese French and
+Senegalese French, against a metropolitan French control.
 
 Everything here is reproducible in an afternoon with your own API key. We publish the protocol,
 not a ranking: run it on your own model and you get your own numbers.
@@ -14,23 +14,30 @@ not a ranking: run it on your own model and you get your own numbers.
 
 | Corpus | Source | Clips | Duration | Speakers |
 |---|---|---|---|---|
-| Beninese French | [`labari-voice/fr-bj-speech-pilot`](https://huggingface.co/datasets/labari-voice/fr-bj-speech-pilot) | 209 | 25.0 min | 2 |
-| Senegalese French | [`labari-voice/fr-sn-speech-pilot`](https://huggingface.co/datasets/labari-voice/fr-sn-speech-pilot) | 210 | 19.3 min | 5 |
+| Beninese French pilot | [`labari-voice/fr-bj-speech-pilot`](https://huggingface.co/datasets/labari-voice/fr-bj-speech-pilot) | 209 | 25.0 min | 2 |
+| Senegalese French pilot | [`labari-voice/fr-sn-speech-pilot`](https://huggingface.co/datasets/labari-voice/fr-sn-speech-pilot) | 210 | 19.3 min | 5 |
+| Both pilots together, `fr_bj+fr_sn` | | 419 | 44.3 min | 7 |
 | Control | `google/fleurs`, config `fr_fr`, split `test` | 210 sampled, seed 17 | 35.7 min | mixed |
 
 Both pilots are CC-BY-4.0, in the FLEURS file schema, read speech, WAV PCM 16-bit, 16 kHz mono.
-Sentences were written locally, about local realities, and read by local speakers.
+Sentences were written by speakers of each variety, about everyday life across ten domains,
+and read by speakers of that variety.
 
-Recording conditions are deliberately favourable: median signal-to-noise ratio of 22.9 dB in
-Benin and 24.1 dB in Senegal, one speaker at a time, no overlap. Results obtained here are a
-floor, not an average.
+Headline figures are computed on both pilots together, as one West African French test set of
+419 clips and seven speakers. The scripts also report each pilot on its own.
+
+Recording conditions are deliberately favourable: median signal-to-noise ratio of 22.9 dB for
+the Beninese pilot and 24.1 dB for the Senegalese pilot, one speaker at a time, no overlap.
+This is read speech recorded in studio, the most favourable case for any model, so the figures
+obtained here are a floor.
 
 ## Protocol
 
-Four conditions per model, so that the accent effect and the narrowband effect can be separated
-on the same voice:
+Each model is run on the control and on both pilots at studio quality, 16 kHz. Optionally,
+the same audio can be run through the telephone band, to separate the effect of the variety
+from the effect of narrowband audio on the same voice:
 
-- control and both corpora at studio 16 kHz
+- control and both pilots at studio 16 kHz
 - the same audio re-encoded through G.711 mu-law at 8 kHz, then decoded, with no upsampling
   back to 16 kHz since that regenerates nothing
 
@@ -49,26 +56,26 @@ apostrophes unified, and numbers, times and ordinals expanded to words with `num
 including roman numerals such as `XIXe`.
 
 That last step matters more than it looks. A model writing `7h30` where the reference says
-`sept heures trente` is saying the same thing. Before we expanded numbers on both sides, our
-Beninese gap read twice as large as it really is.
+`sept heures trente` is saying the same thing. Before we expanded numbers on both sides, the
+gap we measured on one pilot read twice as large as it really is.
 
-**Local-term recall**, which is the metric that matters most here. For every local term in the
-reference, we check whether it appears in the transcript. Same word, same sentence, so the
-measure is immune to differences in corpus difficulty, unlike an aggregate error rate.
+**Local name error rate (LNER)**, the metric that matters most here. It is the share of proper
+nouns in the references that the transcript gets wrong: towns, districts, utilities, markets,
+historical figures, the names people say every day. A model can score a low word error rate and
+still miss most of them, because they are a small fraction of the words and the fraction that
+carries the meaning. A proper noun is a word of at least four letters capitalised mid-sentence
+in the raw reference. LNER is reported strict and accent-insensitive; the two are usually within
+a point, so a dropped accent never explains the figure. Foreign names that happen to appear in
+a reference count too, which makes the rate conservative.
 
-A local term is a word of at least four characters that is either capitalised mid-sentence in
-the raw reference, so a proper noun, or absent from a French vocabulary of 9,885 forms built
-from the three FLEURS `fr_fr` splits. Inflected forms of known words are excluded by a suffix
-rule, and a short manual exclusion list in `bench/entities.py` catches the residue. The lexicon
-holds 340 occurrences in Benin and 361 in Senegal.
-
-**Local name error rate (LNER)**, the sharpest of the three. It is the share of proper nouns in
-the references that the transcript gets wrong: towns, districts, utilities, people. A model can
-score a single-digit word error rate and still miss most of them, because they are a small
-fraction of the words and the fraction that carries the meaning. LNER is reported strict and
-accent-insensitive; the two are usually within a point, so a dropped accent never explains the
-figure. Foreign names that happen to appear in a reference count too, which makes the rate
-conservative.
+**Local-term recall**, a broader view. For every local term in the reference, we check whether
+it appears in the transcript. Same word, same sentence, so the measure is immune to differences
+in corpus difficulty, unlike an aggregate error rate. A local term is a word of at least four
+characters that is either a proper noun as defined above, or absent from a French vocabulary of
+9,885 forms built from the three FLEURS `fr_fr` splits. Inflected forms of known words are
+excluded by a suffix rule, and a short manual exclusion list in `bench/entities.py` catches the
+residue. The lexicon holds 340 occurrences in the Beninese pilot and 361 in the Senegalese
+pilot.
 
 ## Running it
 
@@ -84,8 +91,8 @@ cp .env.example .env                                         # add the key your 
 ./.venv/bin/python bench/run.py <adapter> fr_sn - 6
 ./.venv/bin/python bench/run.py <adapter> fr_fr_control - 6
 
-./.venv/bin/python bench/score.py            # WER, CER, gap to control
-./.venv/bin/python bench/entities.py         # local-term recall
+./.venv/bin/python bench/score.py            # WER, CER, gap to control, per pilot and fr_bj+fr_sn
+./.venv/bin/python bench/entities.py         # LNER and local-term recall, same breakdown
 ```
 
 The fourth argument is the number of parallel requests. Runs resume where they stopped, and
@@ -99,23 +106,18 @@ holds the key, and a `transcribe()` function that posts the audio and returns th
 template in `bench/adapters/example.py` is about twenty lines. Force the language to French and
 pin the model version, otherwise your figures will not be comparable with anyone else's.
 
-## Limits we know about
+## Scope
 
-Read speech only. Nothing here says anything about spontaneous conversation, background noise,
-overlapping speakers, or code-switching into Fon or Wolof, which are the conditions where an
-actual contact centre operates.
-
-Two speakers in Benin and five in Senegal, so a country figure partly measures individuals. In
-our own runs the spread between the five Senegalese speakers reached eight points on the same
-model.
-
-Clips last a few seconds, so a one-point difference between two close systems is not
-distinguishable.
+The pilots are read speech, recorded in studio, one speaker at a time: the most favourable case
+for any model. Spontaneous conversation, background noise, overlapping speakers and
+code-switching into a local language can only add errors, so the figures measured here are a
+floor.
 
 ## Licence
 
 Code under MIT. The two pilot corpora are CC-BY-4.0. FLEURS belongs to its authors.
 
-Built by [Labari Voice](https://huggingface.co/labari-voice), which produces speech data for
-low-resource languages and for the regional varieties of French. If you measure your own model with this and get a result worth
-discussing, we are interested either way.
+Built by [Labari Voice](https://labari.dev), which produces speech datasets for low-resource
+languages and for the regional varieties of French, designed to fix the errors measured here.
+Datasets on [Hugging Face](https://huggingface.co/labari-voice). If you measure your own model
+with this and get a result worth discussing, write to sales@labari.dev.

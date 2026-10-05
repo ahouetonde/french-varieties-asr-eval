@@ -4,6 +4,9 @@ Usage:
     python bench/score.py             every run found in results/
     python bench/score.py my_vendor   one adapter only
 
+Both pilots are also scored together, as one West African French test set (fr_bj+fr_sn):
+419 clips and seven speakers, which is the headline figure.
+
 Reference and hypothesis go through the same normalisation: lower case, punctuation removed,
 hyphens split, apostrophes unified, numbers, times and ordinals spelled out. Without it you
 measure typography, not recognition.
@@ -21,6 +24,9 @@ from num2words import num2words
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 RESULTS = ROOT / "results"
+
+# the two pilots scored together, at studio quality and through the telephone band
+COMBINED = {"fr_bj+fr_sn": ("fr_bj", "fr_sn"), "fr_bj+fr_sn_tel8k": ("fr_bj_tel8k", "fr_sn_tel8k")}
 
 TIME = re.compile(r"\b(\d{1,2})\s*h\s*(\d{1,2})?\b")
 ORDINAL = re.compile(r"\b(\d+)\s*(?:e|è|ème|eme)\b")
@@ -101,8 +107,18 @@ def load_refs(corpus: str) -> dict:
     return refs
 
 
+def score(vendor: str, corpus: str, pairs: list, errors: int) -> dict:
+    words = jiwer.process_words([p[0] for p in pairs], [p[1] for p in pairs])
+    chars = jiwer.process_characters([p[0] for p in pairs], [p[1] for p in pairs])
+    return {
+        "vendor": vendor, "corpus": corpus, "n": len(pairs), "failed": errors,
+        "wer": words.wer * 100, "cer": chars.cer * 100,
+        "sub": words.substitutions, "del": words.deletions, "ins": words.insertions,
+    }
+
+
 def main(only: str | None):
-    rows = []
+    rows, runs = [], {}
     for f in sorted(RESULTS.glob("*.jsonl")):
         vendor, corpus = f.stem.split("__", 1)
         if only and vendor != only:
@@ -123,13 +139,15 @@ def main(only: str | None):
         if not pairs:
             print(f"{f.name}: nothing to score ({errors} failed clips)")
             continue
-        words = jiwer.process_words([p[0] for p in pairs], [p[1] for p in pairs])
-        chars = jiwer.process_characters([p[0] for p in pairs], [p[1] for p in pairs])
-        rows.append({
-            "vendor": vendor, "corpus": corpus, "n": len(pairs), "failed": errors,
-            "wer": words.wer * 100, "cer": chars.cer * 100,
-            "sub": words.substitutions, "del": words.deletions, "ins": words.insertions,
-        })
+        runs[(vendor, corpus)] = (pairs, errors)
+        rows.append(score(vendor, corpus, pairs, errors))
+
+    for vendor in sorted({v for v, _ in runs}):
+        for name, parts in COMBINED.items():
+            if all((vendor, c) in runs for c in parts):
+                pairs = [p for c in parts for p in runs[(vendor, c)][0]]
+                errors = sum(runs[(vendor, c)][1] for c in parts)
+                rows.append(score(vendor, name, pairs, errors))
 
     if not rows:
         sys.exit("nothing to score: run bench/run.py first")

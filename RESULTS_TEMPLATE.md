@@ -3,21 +3,29 @@
 Fill this in with your own run. We keep the table shape identical so that figures produced by
 different people stay comparable.
 
-| Model | Control fr_fr | Benin | Senegal | Gap to control, Benin | Gap to control, Senegal |
+Word error rate, studio audio:
+
+| Model | Control fr_fr | Both pilots, fr_bj+fr_sn | Gap to control | Beninese pilot | Senegalese pilot |
 |---|---|---|---|---|---|
-| `<model-id>` | x.x % | x.x % | x.x % | +x % | +x % |
+| `<model-id>` | x.x % | x.x % | +x % | x.x % | x.x % |
 
-Local-term recall, the metric that is immune to corpus difficulty:
+Local name error rate (LNER), the share of local proper nouns transcribed wrongly:
 
-| Model | Benin, 340 terms | Senegal, 361 terms |
-|---|---|---|
-| `<model-id>` | xx.x % | xx.x % |
+| Model | Both pilots, 155 names | Accent-insensitive | Beninese pilot, 61 names | Senegalese pilot, 94 names |
+|---|---|---|---|---|
+| `<model-id>` | xx.x % | xx.x % | xx.x % | xx.x % |
 
-Narrowband, same audio through G.711 at 8 kHz:
+Local-term recall:
 
-| Model | Control | Benin | Senegal |
+| Model | Both pilots, 701 terms | Beninese pilot, 340 terms | Senegalese pilot, 361 terms |
 |---|---|---|---|
-| `<model-id>` | x.x % | x.x % | x.x % |
+| `<model-id>` | xx.x % | xx.x % | xx.x % |
+
+Optional, same audio through G.711 at 8 kHz:
+
+| Model | Control | Both pilots |
+|---|---|---|
+| `<model-id>` | x.x % | x.x % |
 
 Always state the date of the run and the exact model identifier. Vendors ship new versions
 without renaming the endpoint, so an undated figure ages badly.
