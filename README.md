@@ -20,8 +20,8 @@ not a ranking: run it on your own model and you get your own numbers.
 | Control | `google/fleurs`, config `fr_fr`, split `test` | 210 sampled, seed 17 | 35.7 min | mixed |
 
 Both pilots are CC-BY-4.0, in the FLEURS file schema, read speech, WAV PCM 16-bit, 16 kHz mono.
-Sentences were written by speakers of each variety, about everyday life across ten domains,
-and read by speakers of that variety.
+Sentences were written in advance, about everyday life across ten domains, then sent to the
+readers, who are speakers of each variety.
 
 Headline figures are computed on both pilots together, as one West African French test set of
 419 clips and seven speakers. The scripts also report each pilot on its own.
@@ -64,7 +64,12 @@ nouns in the references that the transcript gets wrong: towns, districts, utilit
 historical figures, the names people say every day. A model can score a low word error rate and
 still miss most of them, because they are a small fraction of the words and the fraction that
 carries the meaning. A proper noun is a word of at least four letters capitalised mid-sentence
-in the raw reference. LNER is reported strict and accent-insensitive; the two are usually within
+in the raw reference. The two pilots together hold 155 occurrences of 63 distinct names.
+
+A name counts as correct only if its exact normalised form appears in the transcript. A near
+miss, such as `SNELC` for `Senelec`, counts as an error. This is deliberate: a search over
+transcripts, a form or a delivery address needs the exact spelling, and a name the model does
+not know cannot be corrected downstream. LNER is reported strict and accent-insensitive; the two are usually within
 a point, so a dropped accent never explains the figure. Foreign names that happen to appear in
 a reference count too, which makes the rate conservative.
 
