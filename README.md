@@ -67,7 +67,7 @@ carries the meaning. A proper noun is a word of at least four letters capitalise
 in the raw reference. The two pilots together hold 155 occurrences of 63 distinct names.
 
 A name counts as correct only if its exact normalised form appears in the transcript. A near
-miss, such as `SNELC` for `Senelec`, counts as an error. This is deliberate: a search over
+miss, such as `Kaolak` for `Kaolack`, counts as an error. This is deliberate: a search over
 transcripts, a form or a delivery address needs the exact spelling, and a name the model does
 not know cannot be corrected downstream. LNER is reported strict and accent-insensitive; the two are usually within
 a point, so a dropped accent never explains the figure. Foreign names that happen to appear in
